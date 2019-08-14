@@ -1,2 +1,2 @@
-# spitter
-Spitter
+# splitter
+Splitter
