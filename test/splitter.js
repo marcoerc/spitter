@@ -1,25 +1,41 @@
 const Splitter = artifacts.require("Splitter");
 
 contract('Splitter', (accounts) => {
-  it('should start with 0', async () => {
-    const SplitterInstance = await Splitter.deployed();
-    const balance = await SplitterInstance.getBalance.call();
 
-    assert.equal(balance.valueOf(), 0, "The contract has not zero balance");
+  let SplitterInstance; 
+  let bob; 
+  let carol;
+  let amount; 
+
+  before("Accounts initialization", function() {
+    bob = accounts[1];
+    carol = accounts[2];
+    amount = 10; 
   });
-  it('should split ether correctly', async () => {
-    const SplitterInstance = await Splitter.deployed();
 
-    const bob = accounts[1];
-    const carol = accounts[2];
+  beforeEach('deploy new instance', async () => {
+    SplitterInstance = await Splitter.new(accounts[1],accounts[2])
+  })
+
+  it('split correctly', async () => {
+       
+    console.log("contract address: " +  SplitterInstance.address);
 
     // Get initial balances of first and second account.
     const bobStartingBalance = await web3.eth.getBalance(bob);
     const carolStartingBalance = await web3.eth.getBalance(carol);
+    const BN = web3.utils.BN;
 
-    // Make transaction from first account to second.
-    const amount = 10;
     await SplitterInstance.split({value: amount});
+    let bobTxInfo = await SplitterInstance.withdraw(amount/2, {from: bob});
+    const bobTx = await web3.eth.getTransaction(bobTxInfo.tx);
+    const bobFee = new BN(bobTx.gasPrice).mul(new BN(bobTxInfo.receipt.gasUsed));
+
+    
+    let carolTxInfo = await SplitterInstance.withdraw(amount/2, {from: carol});
+    const carolTx = await web3.eth.getTransaction(carolTxInfo.tx);
+    const carolFee = new BN(carolTx.gasPrice).mul(new BN(carolTxInfo.receipt.gasUsed));
+
 
     // Get balances of first and second account after the transactions.
     const bobEndingBalance = await web3.eth.getBalance(bob);
@@ -30,7 +46,10 @@ contract('Splitter', (accounts) => {
     console.log("carolStartingBalance " + carolStartingBalance);
     console.log("carolEndingBalance " + carolEndingBalance);
 
-    assert.equal(Number(bobEndingBalance), Number(bobStartingBalance)+(amount/2), "Amount wasn't splitted correctly");
-    assert.equal(Number(carolEndingBalance), Number(carolStartingBalance)+(amount/2), "Amount wasn't splitted correctly");
+    
+
+    assert.equal(bobEndingBalance, new BN(bobStartingBalance).sub(bobFee).add(new BN(""+amount/2)).toString(), "Amount wasn't splitted correctly");
+    assert.equal(carolEndingBalance, new BN(carolStartingBalance).sub(carolFee).add(new BN(""+amount/2)).toString(), "Amount wasn't splitted correctly");
   });
+
 });

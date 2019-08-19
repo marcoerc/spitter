@@ -4,22 +4,27 @@ import "./Owned.sol";
 
 contract Stoppable is Owned {
 
-	bool public running; 
+	bool private running; 
 
-	constructor() public {
-		running = true;
+	constructor(bool start) public {
+		running = start;
 	}
 
 	modifier isRunning {
-		require(running);
+		require(running, "RUN001: The contract is not in a running state.");
 		_;
 	}
 
-	function stop() isOwner public {
+	modifier isPaused {
+		require(!running, "RUN002: The contract is not in a paused state.");
+		_;
+	}
+
+	function stop() isOwner isRunning public {
 		running = false; 
 	}
 
-	function start() isOwner public {
+	function start() isOwner isPaused public {
 		running = true;
 	}
 }
